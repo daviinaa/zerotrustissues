@@ -78,6 +78,8 @@ main.container { padding-top: clamp(40px, 6vw, 72px); }
   transition: background .2s;
 }
 .nav-logo:hover .mark { background: var(--accent); color: #fff; }
+.mark-img { width: 30px; height: 30px; image-rendering: pixelated; border-radius: 6px; flex: none; transition: transform .2s; }
+.nav-logo:hover .mark-img { transform: rotate(-6deg) scale(1.06); }
 .nav-links { display: flex; gap: clamp(16px, 3vw, 28px); }
 .nav-links a { color: var(--text-secondary); font-size: .9rem; font-weight: 500; padding: 6px 0; border-bottom: 1.5px solid transparent; }
 .nav-links a:hover { color: var(--text); }
