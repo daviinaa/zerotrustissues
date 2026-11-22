@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What building a GAN-based fraud detection pipeline taught me about AI governance | Zero Trust Issues</title>
+  <meta name="description" content="My MSc pipeline deployed a GAN-based fraud model to Kubernetes. The governance lessons came from the thresholds I picked alone, the bias I could not measure and the gaps I documented but did not close.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/gan-fraud-detection-governance/">
+  <meta property="og:title" content="What building a GAN-based fraud detection pipeline taught me about AI governance">
+  <meta property="og:description" content="Threshold choices as risk decisions, a bias question the data could not answer, and what a CI/CD pipeline does and does not give you as governance.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/gan-fraud-detection-governance/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>What building a GAN-based fraud detection pipeline taught me about AI governance</h1>
+        <div class="article-meta">November 2026 · 7 min read</div>
+      </div>
+
+      <p>My MSc dissertation wasn't supposed to be about governance. I was building a continuous delivery pipeline for a GAN-based fraud detection model. Basically: how do you take a model like that and deploy it to Kubernetes reliably, repeatedly, without everything catching fire?</p>
+
+      <p>But here's the thing about putting a fraud model behind an automated pipeline: the governance questions show up whether you invited them or not.</p>
+
+      <h2>The project: CD4ML for fraud detection</h2>
+
+      <p>Let me explain what I actually built, because it matters for everything that follows. CD4ML (Continuous Delivery for Machine Learning) is basically applying everything we know about CI/CD to ML model deployment. You treat your model like any other piece of software: it gets tested, validated, containerised and deployed through an automated pipeline.</p>
+
+      <p>The model is a GA-GAN adapted from Ge et al. (2025), trained on the public European credit card dataset. The GAN learns from the fraud rows in the training data, generates synthetic fraud until the classes are balanced, and then a small classifier (13,501 parameters) is trained on real plus synthetic data. That classifier is what gets served.</p>
+
+      <p>I want to be honest about the boundary. Training ran by hand, on my machine. What the pipeline automates is everything after that: every push to main runs the tests and a model evaluation gate, builds an image tagged with the git SHA, rolls it out to Azure Kubernetes Service with zero-downtime updates, health-checks it, and rolls back automatically if the rollout fails. Prometheus and Grafana watch latency, request rates, the share of transactions flagged and model load time.</p>
+
+      <p>It was a research prototype in a production-like setting, not a production system. That distinction turned out to be a governance lesson of its own.</p>
+
+      <p>Standard DevOps stuff, right? Except the thing being deployed makes decisions about whether a transaction looks like fraud. And that changes everything.</p>
+
+      <h2>How governance showed up uninvited</h2>
+
+      <p>The first time I ran the full pipeline, I had this moment where I realised: wait, who decides what's "good enough" to deploy a fraud detection model?</p>
+
+      <p>The gate blocks a deployment unless the model hits AUC 0.90, F1 0.70, precision 0.70 and recall 0.65. I picked those numbers. I set them conservatively below what my 10-epoch baseline achieved (AUC 0.946, F1 0.755) so the gate would catch a real regression without failing on noise. That's a defensible engineering choice. But look at what two of those numbers actually say.</p>
+
+      <p>A recall floor of 0.65 means I was willing to ship a model that misses up to 35% of fraud. A precision floor of 0.70 means I was willing to ship a model where up to 30% of the transactions it flags belong to legitimate customers. Those aren't technical parameters. They're decisions about how much fraud gets through and how many real people get their card blocked.</p>
+
+      <p>The model I actually deployed did better than both floors. On the 56,962 held-out test transactions, 98 of them fraud, it caught 71 and missed 27, and it wrongly flagged 19 legitimate ones. Precision 0.79, recall 0.72, F1 0.755. And note what F1 isn't: it isn't an error rate. You can't read "F1 0.75" as "wrong 25% of the time". The model was right on the overwhelming majority of transactions. The question that matters is which mistakes it makes, and who pays for them.</p>
+
+      <p>In traditional CI/CD, your tests either pass or fail. The API returns 200 or it doesn't. With ML, every threshold is a decision about acceptable risk. That's a governance question, not an engineering question. And I was making it alone, in a Python script called <code>evaluate_gate.py</code>.</p>
+
+      <h2>The bias question I couldn't even ask</h2>
+
+      <p>Then there's the data. Financial data can carry the biases of the system that produced it, and a GAN trained on that data learns whatever patterns are in it. So the obvious governance question is: does the model treat some groups of customers worse than others?</p>
+
+      <p>I couldn't answer that. Not because I forgot, but because the dataset makes it impossible. The European credit card dataset is PCA-anonymised. It has Time, Amount and 28 principal components called V1 to V28. No age, no gender, no location, nothing demographic. There was no bias check in my pipeline, because there was nothing to check against.</p>
+
+      <p>And I think that's a governance finding in itself. Anonymisation protects the cardholders' privacy, which is good. But it also removes the ability to audit the model for fairness. A model trained on this data could still be unfair through proxies: transaction amounts or times that correlate with who someone is. Nobody using this dataset can measure that, me included.</p>
+
+      <p>If I'd been asked "is your fraud model fair?", the honest answer is "I don't know, and the data was designed so that I couldn't know." That's a very different statement from "yes", and a governance process needs to be able to tell them apart.</p>
+
+      <p>This is where governance frameworks matter. Not because they give you the answers, but because they force you to ask questions you wouldn't have thought to ask on your own.</p>
+
+      <h2>What the GAN learned (and what I learned)</h2>
+
+      <p>The generator in a GAN is literally trying to fool the discriminator. It's adversarial by design. When you use that for fraud detection, generating synthetic fraud to train a better detector, you're building a component whose job is to produce convincing fake fraudulent transactions.</p>
+
+      <p>So, what if someone extracted the generator? Here's the uncomfortable answer: they wouldn't need to. The checkpoint my API loads contains the generator and discriminator weights alongside the classifier, and that checkpoint is committed to my public GitHub repo. I hadn't separated the artefact the service needs (the classifier) from the one it doesn't (the generator). I only noticed when I went looking.</p>
+
+      <p>It didn't stop there. When I wrote up the dissertation I listed the security gaps honestly: the API loads the model with <code>torch.load(weights_only=False)</code>, which allows arbitrary code execution from a tampered file. There's no TLS, no authentication, no request logging and no Kubernetes NetworkPolicies. Training happened on a laptop with no access controls, model files aren't encrypted at rest, and there's no security scanning in the pipeline. I identified all of these. I didn't build the fixes.</p>
+
+      <p>That's the real problem with AI governance right now. It relies on individual engineers being thoughtful enough to notice risks, and even a security student writing a dissertation about deployment can ship a model with its generator in a public repo.</p>
+
+      <h2>CD4ML as a governance pattern (with limits)</h2>
+
+      <p>Here's the thing I didn't expect: the pipeline itself turned out to be a governance mechanism, just not a complete one.</p>
+
+      <p>What it does give you: every deployment goes through automated gates with documented thresholds. Every image is tagged with the git SHA, so you can trace what's running back to a commit. A failed rollout rolls itself back. GitHub Actions keeps a log of every deployment. Out of the 13 errors I documented during the project, 8 were caught by the automation itself.</p>
+
+      <p>What it doesn't give you: the model files were versioned by timestamped filenames because I deferred MLflow, so model lineage is weaker than image lineage. There's no request logging, so if someone asked "why did this model flag this transaction?", I couldn't answer it. There's no drift detection. And there's no human approval step before a deployment goes out.</p>
+
+      <p>My favourite example of the gap is a bug I call the scaler seed mismatch. The model expects its inputs scaled with the mean and standard deviation of the training data. The training script never saved those values, so a separate script rebuilt them from the same split, and the two disagreed on the random seed (42 in one place, 123 in the other). Nothing crashed. The values were just wrong. Getting identical results across environments meant finding and fixing it first. That's an artefact governance failure: a preprocessing file with no lineage back to the model it belongs to.</p>
+
+      <p>That's not just an engineering bug. That's exactly the kind of thing accountability infrastructure is meant to prevent.</p>
+
+      <p>Since finishing my dissertation, I've started studying AI governance properly: the EU AI Act, NIST AI RMF, ISO 42001. And I keep seeing the same patterns. The frameworks want traceability, accountability, risk assessment, monitoring and human oversight. My pipeline gave me some of the traceability and a slice of the monitoring. It gave me nothing for risk assessment or human oversight unless I built it in deliberately.</p>
+
+      <p>The gap isn't conceptual. It's that the people writing governance frameworks don't know what a deployment pipeline can do, and the people building deployment pipelines don't read governance frameworks.</p>
+
+      <h2>What this means for the AI governance conversation</h2>
+
+      <p>I think we need more engineers in the governance conversation. Not because engineers have all the answers (my bias blind spot and my public generator weights show we clearly don't) but because we know what's buildable. We know the difference between a governance requirement that can be automated and one that can't. We know where the monitoring hooks need to go. We know what "auditable" actually means in a running system.</p>
+
+      <p>My GAN pipeline taught me that AI governance isn't a separate discipline from AI engineering. It's embedded in every decision you make, from your threshold values to your data sources to which files end up in your repo. The question is whether you're making those decisions intentionally, with a framework, or accidentally, alone in a Python file.</p>
+
+      <p>I'd rather do it intentionally. That's why I'm here.</p>
+
+      <p>If you want the details, the <a href="/projects/automated-gan-deployment/">project page</a> has the architecture, results and an in-browser demo, and I've written up <a href="/articles/same-model-three-environments/">the cross-environment results</a> and <a href="/articles/load-testing-fraud-model-aks-minikube/">the load tests</a> separately.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

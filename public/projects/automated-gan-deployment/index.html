@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automated GAN fraud detection deployment | Zero Trust Issues</title>
+  <meta name="description" content="MSc project: a CI/CD pipeline that tests, gates and deploys a GA-GAN credit card fraud classifier to Azure Kubernetes Service, with parity, load and timing results and an in-browser demo.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/projects/automated-gan-deployment/">
+  <meta property="og:title" content="Automated GAN fraud detection deployment">
+  <meta property="og:description" content="MSc project: a CI/CD pipeline that tests, gates and deploys a GA-GAN credit card fraud classifier to Azure Kubernetes Service, with parity, load and timing results.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/projects/automated-gan-deployment/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/projects/automated-gan-deployment/demo.js" defer></script>
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/">Writing</a>
+        <a href="/projects/" aria-current="page">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body project-page">
+      <div class="article-header">
+        <h1>Automated GAN fraud detection deployment</h1>
+        <div class="article-meta">MSc Cyber Security dissertation · Python, FastAPI, Docker, GitHub Actions, Azure AKS, Prometheus, Grafana, Locust</div>
+        <p class="lede">A feasibility study: can a GAN-based credit card fraud model be deployed through an automated CI/CD pipeline to Kubernetes without losing accuracy, and what does that automation actually buy you? The contribution is the pipeline, not a new model.</p>
+      </div>
+
+      <ul class="link-list">
+        <li><a href="https://github.com/daviinaa/automated-GAN-deployment">Source code on GitHub</a></li>
+        <li><a href="#demo">Try the classifier in your browser</a></li>
+        <li><a href="/articles/same-model-three-environments/">Blog: Same model, three environments</a></li>
+        <li><a href="/articles/load-testing-fraud-model-aks-minikube/">Blog: Load testing a fraud model on AKS and minikube</a></li>
+        <li><a href="/articles/gan-fraud-detection-governance/">Blog: What the project taught me about AI governance</a></li>
+      </ul>
+
+      <div class="stat-grid">
+        <div class="stat"><span class="stat-value">0.0000</span><span class="stat-label">change in precision, recall and F1 across local, minikube and AKS</span></div>
+        <div class="stat"><span class="stat-value">15 ms</span><span class="stat-label">p50 latency on AKS at 10, 50 and 100 users</span></div>
+        <div class="stat"><span class="stat-value">267.8 rps</span><span class="stat-label">throughput at 100 users on AKS, 0 failures</span></div>
+        <div class="stat"><span class="stat-value">7%</span><span class="stat-label">peak share of the 500m CPU limit at 100 users</span></div>
+      </div>
+
+      <h2>The problem</h2>
+
+      <p>Most fraud detection research stops at a notebook and a results table. Very little of it asks what happens when you put the model behind an automated deployment pipeline: does it behave the same once it is containerised and running on different hardware, how long does the pipeline take, and what does it cost in latency and resources? The MLOps literature also describes plenty of adoption barriers, so I wanted to see which ones I would actually hit.</p>
+
+      <p>I took a GA-GAN fraud model adapted from Ge et al. (2025), "Gated attention based generative adversarial networks for imbalanced credit card fraud detection", trained it on the public European credit card dataset (284,807 transactions, 492 of them fraud, 0.17%), and built the pipeline around it. The dataset is PCA-anonymised: 30 features (Time, V1 to V28, Amount) and no demographic fields.</p>
+
+      <h3>Research questions</h3>
+      <ol>
+        <li><strong>Performance.</strong> Does an automated CI/CD pipeline preserve the model's fraud detection performance compared with a manually deployed baseline? Success: a difference below 0.01 in precision, recall, F1 and AUC.</li>
+        <li><strong>Efficiency.</strong> How much does automation reduce deployment time and operational complexity? I measured this as safety scope (which checks run) as well as time.</li>
+        <li><strong>Non-functional behaviour.</strong> What does the pipeline mean for inference latency and resource use under load? Success: p99 below 500 ms at 100 concurrent users with zero failures.</li>
+        <li><strong>Feasibility.</strong> How do the findings line up with the MLOps adoption barriers in the literature?</li>
+      </ol>
+
+      <h2>Architecture</h2>
+
+      <p>Three layers. Training runs by hand on my machine. Serving is a FastAPI app in a Docker image with the model baked in. CI/CD runs in GitHub Actions and deploys to a single-node Azure Kubernetes Service cluster (Standard_D2als_v7: 2 vCPU, 4 GB, AMD64). Prometheus and Grafana handle monitoring.</p>
+
+      <figure class="figure">
+        <div class="diagram-wrap">
+          <svg class="diagram" viewBox="0 0 900 600" role="img" aria-labelledby="arch-title arch-desc" xmlns="http://www.w3.org/2000/svg">
+          <title id="arch-title">Pipeline architecture</title>
+          <desc id="arch-desc">Three layers. Training runs manually on a laptop: the Kaggle dataset trains a GA-GAN on fraud rows, synthetic fraud balances the classes, an MLP classifier is trained, and the checkpoint plus scaler.json are committed to git. CI/CD in GitHub Actions: a push to main runs the tests and the four-metric evaluation gate, builds an AMD64 image tagged with the git SHA, pushes it to the container registry and deploys to AKS with a rollout check, automatic rollback on failure and a health check. Serving on a single-node AKS cluster: a LoadBalancer on port 80 sends traffic to two FastAPI pods on port 8000, which Prometheus scrapes every 15 seconds for Grafana dashboards.</desc>
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <rect class="d-lane" x="5" y="10" width="890" height="175" rx="8"/>
+          <text class="d-lane-title" x="20" y="32">1. TRAINING  (local, run by hand)</text>
+          <rect class="d-lane" x="5" y="205" width="890" height="175" rx="8"/>
+          <text class="d-lane-title" x="20" y="227">2. CI/CD  (GitHub Actions, on push to main)</text>
+          <rect class="d-lane" x="5" y="410" width="890" height="175" rx="8"/>
+          <text class="d-lane-title" x="20" y="432">3. SERVING AND MONITORING  (AKS, 1 node, 2 replicas)</text>
+          <rect class="d-box" x="25" y="55" width="150" height="60" rx="6"/>
+          <text x="100.0" y="81.5" text-anchor="middle">Kaggle CSV</text>
+          <text x="100.0" y="96.5" text-anchor="middle" class="d-small">284,807 rows, 492 fraud</text>
+          <rect class="d-box" x="200" y="55" width="150" height="60" rx="6"/>
+          <text x="275.0" y="81.5" text-anchor="middle">GA-GAN</text>
+          <text x="275.0" y="96.5" text-anchor="middle" class="d-small">trained on fraud rows</text>
+          <rect class="d-box" x="375" y="55" width="150" height="60" rx="6"/>
+          <text x="450.0" y="81.5" text-anchor="middle">Synthetic fraud</text>
+          <text x="450.0" y="96.5" text-anchor="middle" class="d-small">balances the classes</text>
+          <rect class="d-box-accent" x="550" y="55" width="150" height="60" rx="6"/>
+          <text x="625.0" y="81.5" text-anchor="middle">MLP classifier</text>
+          <text x="625.0" y="96.5" text-anchor="middle" class="d-small">13,501 parameters</text>
+          <rect class="d-box" x="725" y="55" width="150" height="60" rx="6"/>
+          <text x="800.0" y="81.5" text-anchor="middle">Checkpoint + scaler</text>
+          <text x="800.0" y="96.5" text-anchor="middle" class="d-small">committed to git</text>
+          <line class="d-arrow" x1="175" y1="85.0" x2="198" y2="85.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="350" y1="85.0" x2="373" y2="85.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="525" y1="85.0" x2="548" y2="85.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="700" y1="85.0" x2="723" y2="85.0" marker-end="url(#ah)"/>
+          <text class="d-small" x="880" y="32" text-anchor="end">Stratified 80/20 split, seed 123. 10 GAN + 10 classifier epochs.</text>
+          <rect class="d-box" x="25" y="250" width="150" height="60" rx="6"/>
+          <text x="100.0" y="276.5" text-anchor="middle">Push to main</text>
+          <text x="100.0" y="291.5" text-anchor="middle" class="d-small">or manual dispatch</text>
+          <rect class="d-box-accent" x="200" y="250" width="150" height="60" rx="6"/>
+          <text x="275.0" y="276.5" text-anchor="middle">test</text>
+          <text x="275.0" y="291.5" text-anchor="middle" class="d-small">pytest + model gate</text>
+          <rect class="d-box" x="375" y="250" width="150" height="60" rx="6"/>
+          <text x="450.0" y="276.5" text-anchor="middle">build-and-push</text>
+          <text x="450.0" y="291.5" text-anchor="middle" class="d-small">AMD64, tag = git SHA</text>
+          <rect class="d-box" x="550" y="250" width="150" height="60" rx="6"/>
+          <text x="625.0" y="276.5" text-anchor="middle">Container registry</text>
+          <text x="625.0" y="291.5" text-anchor="middle" class="d-small">SHA + latest tags</text>
+          <rect class="d-box" x="725" y="250" width="150" height="60" rx="6"/>
+          <text x="800.0" y="276.5" text-anchor="middle">deploy</text>
+          <text x="800.0" y="291.5" text-anchor="middle" class="d-small">apply + rollout status</text>
+          <line class="d-arrow" x1="175" y1="280.0" x2="198" y2="280.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="350" y1="280.0" x2="373" y2="280.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="525" y1="280.0" x2="548" y2="280.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="700" y1="280.0" x2="723" y2="280.0" marker-end="url(#ah)"/>
+          <line class="d-fail" x1="275.0" y1="310" x2="275.0" y2="338"/>
+          <text class="d-fail-text" x="275.0" y="352" text-anchor="middle">any metric below threshold:</text>
+          <text class="d-fail-text" x="275.0" y="366" text-anchor="middle">exit 1, nothing is built</text>
+          <line class="d-fail" x1="800.0" y1="310" x2="800.0" y2="338"/>
+          <text class="d-fail-text" x="800.0" y="352" text-anchor="middle">rollout fails in 300 s:</text>
+          <text class="d-fail-text" x="800.0" y="366" text-anchor="middle">rollout undo, job fails</text>
+          <text class="d-small" x="880" y="227" text-anchor="end">Gate: AUC &#8805; 0.90, F1 &#8805; 0.70, precision &#8805; 0.70, recall &#8805; 0.65</text>
+          <path class="d-arrow-dash" d="M800.0,115 L800.0,137 L13,137 L13,280.0 L23,280.0" marker-end="url(#ah)"/>
+          <text class="d-small" x="510.0" y="132" text-anchor="middle">model baked into the image</text>
+          <rect class="d-box" x="25" y="455" width="150" height="60" rx="6"/>
+          <text x="100.0" y="481.5" text-anchor="middle">Client / Locust</text>
+          <text x="100.0" y="496.5" text-anchor="middle" class="d-small">HTTP requests</text>
+          <rect class="d-box" x="200" y="455" width="150" height="60" rx="6"/>
+          <text x="275.0" y="481.5" text-anchor="middle">LoadBalancer</text>
+          <text x="275.0" y="496.5" text-anchor="middle" class="d-small">port 80 to 8000</text>
+          <rect class="d-box-accent" x="375" y="455" width="150" height="60" rx="6"/>
+          <text x="450.0" y="481.5" text-anchor="middle">FastAPI x2 pods</text>
+          <text x="450.0" y="496.5" text-anchor="middle" class="d-small">/health /predict /metrics</text>
+          <rect class="d-box" x="550" y="455" width="150" height="60" rx="6"/>
+          <text x="625.0" y="481.5" text-anchor="middle">Prometheus</text>
+          <text x="625.0" y="496.5" text-anchor="middle" class="d-small">scrape every 15 s</text>
+          <rect class="d-box" x="725" y="455" width="150" height="60" rx="6"/>
+          <text x="800.0" y="481.5" text-anchor="middle">Grafana</text>
+          <text x="800.0" y="496.5" text-anchor="middle" class="d-small">latency, load time, rates</text>
+          <line class="d-arrow" x1="175" y1="485.0" x2="198" y2="485.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="350" y1="485.0" x2="373" y2="485.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="525" y1="485.0" x2="548" y2="485.0" marker-end="url(#ah)"/>
+          <line class="d-arrow" x1="700" y1="485.0" x2="723" y2="485.0" marker-end="url(#ah)"/>
+          <path class="d-arrow" d="M800.0,372 L800.0,427 L480.0,427 L480.0,453" marker-end="url(#ah)"/>
+          <text class="d-small" x="792.0" y="421" text-anchor="end">rolling update (maxSurge 1, maxUnavailable 0)</text>
+          <path class="d-arrow-dash" d="M625.0,310 L625.0,332 L420.0,332 L420.0,453" marker-end="url(#ah)"/>
+          <text class="d-small" x="522.5" y="327" text-anchor="middle">image pull</text>
+          <text class="d-small" x="20" y="555">Probes on /health. Requests 250m CPU / 256Mi, limits 500m / 512Mi. No HPA. Plain HTTP, no auth (see limitations).</text>
+          </svg>
+        </div>
+        <figcaption>The pipeline as built. Only inference deployment is automated; training stays manual.</figcaption>
+      </figure>
+
+      <h3>The model</h3>
+      <p>The GA-GAN's generator maps a 100-dimensional latent vector through layers of 128 and 128 units to 30 features. The discriminator uses two Conv1d layers, gated self-attention and fully connected layers. The GAN is trained on the training-set fraud rows only, then generates synthetic fraud until the classes are balanced. The model that actually gets served is the classifier trained on real plus synthetic data: a 4-layer MLP (30, 150, 50, 25, 1) with LeakyReLU and a sigmoid output, 13,501 parameters in total.</p>
+      <p>Hyperparameters follow the released code rather than the paper text: batch size 1000, 10 GAN epochs, 10 classifier epochs, learning rate 0.002. I found ten discrepancies between the paper and the code along the way.</p>
+
+      <h3>The API</h3>
+      <p>Three endpoints: <code>/health</code>, <code>/predict</code> (1 to 1000 transactions, each exactly 30 floats) and <code>/metrics</code> for Prometheus. Six custom metrics cover prediction latency, request latency, request count by status, fraud detected, model load time and transactions processed. Inputs are z-score scaled with the training-split mean and standard deviation stored in <code>scaler.json</code>.</p>
+      <p>The image is python:3.11-slim with CPU-only PyTorch (about 500 MB), runs as a non-root user, has a Docker HEALTHCHECK and one uvicorn worker. On Kubernetes it runs as 2 replicas with liveness and readiness probes on <code>/health</code>, CPU requests of 250m and limits of 500m, memory 256Mi and 512Mi, behind a LoadBalancer service.</p>
+
+      <h2>CI/CD stages and the gate</h2>
+
+      <p>CI runs on every push or pull request to main: Python 3.11, the inference dependencies, then the 18 unit tests with coverage. The full suite is 20 tests (18 unit, 2 integration) with 91% coverage of the inference module.</p>
+
+      <p>CD runs on push to main or manual dispatch, with a concurrency lock so two deployments never overlap:</p>
+      <ol>
+        <li><strong>test:</strong> record the start time, run the tests, then run the model evaluation gate against the checkpoint that will be deployed.</li>
+        <li><strong>build-and-push:</strong> build the image on an AMD64 runner, tag it with the git SHA and <code>latest</code>, push it to the container registry.</li>
+        <li><strong>deploy:</strong> log in to Azure, fetch cluster credentials, patch the manifest with the new image, apply the app and monitoring manifests and wait on <code>rollout status</code> for up to 300 s. If the rollout fails, <code>rollout undo</code> runs and the job fails. Then an in-cluster <code>curl</code> to <code>/health</code> and the timing output.</li>
+      </ol>
+
+      <p>The gate lives in <code>scripts/evaluate_gate.py</code>. If any metric falls below its threshold the script exits 1 and nothing is built or deployed. I set the thresholds conservatively below the 10-epoch baseline:</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption>Model evaluation gate</caption>
+          <thead><tr><th>Metric</th><th class="num">Threshold</th><th class="num">Deployed model</th></tr></thead>
+          <tbody>
+            <tr><td>AUC</td><td class="num">&#8805; 0.90</td><td class="num">0.9461</td></tr>
+            <tr><td>F1</td><td class="num">&#8805; 0.70</td><td class="num">0.7553</td></tr>
+            <tr><td>Precision</td><td class="num">&#8805; 0.70</td><td class="num">0.7889</td></tr>
+            <tr><td>Recall</td><td class="num">&#8805; 0.65</td><td class="num">0.7245</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Results</h2>
+
+      <h3>Same predictions in three environments (RQ1)</h3>
+      <p>I sent all 56,962 held-out test transactions (98 fraud) through the API in each environment, in batches of 500 at a threshold of 0.5.</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption>Model metrics on the test set by environment</caption>
+          <thead><tr><th>Metric</th><th class="num">Local (ARM64 macOS)</th><th class="num">Minikube (AMD64)</th><th class="num">AKS (AMD64)</th><th class="num">Delta</th></tr></thead>
+          <tbody>
+            <tr><td>Precision</td><td class="num">0.7889</td><td class="num">0.7889</td><td class="num">0.7889</td><td class="num">0.0000</td></tr>
+            <tr><td>Recall</td><td class="num">0.7245</td><td class="num">0.7245</td><td class="num">0.7245</td><td class="num">0.0000</td></tr>
+            <tr><td>F1</td><td class="num">0.7553</td><td class="num">0.7553</td><td class="num">0.7553</td><td class="num">0.0000</td></tr>
+            <tr><td>AUC</td><td class="num">0.9461</td><td class="num">0.9475</td><td class="num">0.9475</td><td class="num">+0.0014</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The confusion matrix was identical everywhere: 56,845 true negatives, 19 false positives, 27 missed frauds and 71 caught. Every single classification decision matched. The small AUC shift comes from ARM64 versus AMD64 floating-point differences in the maths libraries, and no binary decision changed. Getting to zero difference meant fixing a scaler seed mismatch first (42 against 123), which I write about in <a href="/articles/same-model-three-environments/">Same model, three environments</a>.</p>
+
+      <figure class="figure">
+        <img src="/projects/automated-gan-deployment/img/training-results.png" width="1600" height="562" alt="Confusion matrix with 56,845 true negatives, 19 false positives, 27 false negatives and 71 true positives, next to a ROC curve with AUC 0.946." loading="lazy">
+        <figcaption>Confusion matrix and ROC curve for the deployed model on the held-out test set.</figcaption>
+      </figure>
+
+      <p>For context, the paper reports AUC 0.929, precision 0.903, recall 0.848 and F1 0.875. My AUC is higher but precision, recall and F1 are lower, which fits training for 10 epochs.</p>
+
+      <h3>AKS against minikube under load (RQ3)</h3>
+      <p>Locust ran 10, 50 and 100 concurrent users for 30 seconds each from my machine, with a task mix of 8 single predictions to 2 batches of five to 1 health check.</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption>Load test results (0 failures at every level on both platforms)</caption>
+          <thead><tr><th>Users</th><th>Platform</th><th class="num">Throughput (rps)</th><th class="num">p50</th><th class="num">p95</th><th class="num">p99</th></tr></thead>
+          <tbody>
+            <tr><td>10</td><td>Minikube</td><td class="num">19.1</td><td class="num">180 ms</td><td class="num">420 ms</td><td class="num">500 ms</td></tr>
+            <tr><td>10</td><td>AKS</td><td class="num">29.3</td><td class="num">15 ms</td><td class="num">22 ms</td><td class="num">43 ms</td></tr>
+            <tr><td>50</td><td>Minikube</td><td class="num">19.9</td><td class="num">1,800 ms</td><td class="num">2,800 ms</td><td class="num">4,200 ms</td></tr>
+            <tr><td>50</td><td>AKS</td><td class="num">133.5</td><td class="num">15 ms</td><td class="num">24 ms</td><td class="num">61 ms</td></tr>
+            <tr><td>100</td><td>Minikube</td><td class="num">20.8</td><td class="num">4,200 ms</td><td class="num">5,100 ms</td><td class="num">8,300 ms</td></tr>
+            <tr><td>100</td><td>AKS</td><td class="num">267.8</td><td class="num">15 ms</td><td class="num">27 ms</td><td class="num">99 ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>AKS met the RQ3 target comfortably: p99 of 99 ms at 100 users against a 500 ms budget. At 100 users that is roughly 280 times lower median latency and 12.9 times the throughput of minikube. Latency includes the network round trip from my machine.</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption>Resource use on AKS (kubectl top, sampled every 5 s)</caption>
+          <thead><tr><th>Load</th><th class="num">CPU avg</th><th class="num">CPU peak</th><th class="num">Memory</th><th class="num">Peak as % of 500m limit</th></tr></thead>
+          <tbody>
+            <tr><td>Idle</td><td class="num">1m</td><td class="num">1m</td><td class="num">165 MiB</td><td class="num">0.2%</td></tr>
+            <tr><td>10 users</td><td class="num">1m</td><td class="num">1m</td><td class="num">165 MiB</td><td class="num">0.2%</td></tr>
+            <tr><td>50 users</td><td class="num">3 to 4m</td><td class="num">4m</td><td class="num">165 MiB</td><td class="num">0.8%</td></tr>
+            <tr><td>100 users</td><td class="num">4m</td><td class="num">35m</td><td class="num">165 MiB</td><td class="num">7.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>More on what those numbers do and do not show in <a href="/articles/load-testing-fraud-model-aks-minikube/">Load testing a fraud model on AKS and minikube</a>.</p>
+
+      <h3>CD run times (RQ2)</h3>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption>Timing from the CD workflow, two consecutive runs</caption>
+          <thead><tr><th>Run</th><th class="num">Test + build</th><th class="num">Deploy</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            <tr><td>Cold</td><td class="num">2m 19s</td><td class="num">5m 38s</td><td class="num">7m 57s</td></tr>
+            <tr><td>Warm</td><td class="num">2m 05s</td><td class="num">1m 10s</td><td class="num">3m 15s</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The warm run was 59% faster overall and the deploy stage 79% faster. The manual path takes about 2 minutes, so the pipeline is slower. What it adds is the tests, the gate, AMD64 builds, health checks, rollback and an audit trail of deployments. When manual cloud deployments went wrong during the project, each incident took 30 to 60 minutes to sort out. The finding is structural enforcement, not speed.</p>
+
+      <h3>Errors along the way (RQ4)</h3>
+      <p>I documented 13 errors across 7 phases and mapped them to MLOps adoption barriers. The automation itself caught 8 of them. One pattern stood out: a failed provisioning step silently dropped the role assignment that lets the cluster pull images from the registry, and the failure only showed up later as a deployment problem. Feasibility comes out positive but conditional on infrastructure expertise, artefact governance and accepting extra complexity.</p>
+
+      <h2 id="demo">Try the classifier in your browser</h2>
+
+      <div class="callout">
+        <p>Predictions here come from the dissertation's classifier (13,501 parameters, 10-epoch GA-GAN baseline, AUC 0.946 on the held-out test set) running locally in your browser via ONNX Runtime Web. The inputs are synthetic, built from the training mean and standard deviation, not real transactions. This is not a production fraud system.</p>
+      </div>
+
+      <div class="demo" id="fraud-demo">
+        <div class="demo-status" id="demo-status" role="status">Loading demo...</div>
+        <p class="demo-note">Every feature starts at the training-set mean. Move a few of them in standard deviations, or draw a random synthetic row. All 30 inputs are listed below the result.</p>
+        <div class="demo-controls" id="demo-controls"></div>
+        <div class="demo-buttons">
+          <button type="button" id="demo-reset" disabled>Reset to training mean</button>
+          <button type="button" id="demo-random" disabled>Random synthetic row</button>
+          <button type="button" id="demo-score" class="primary" disabled>Score this transaction</button>
+        </div>
+        <pre class="demo-result" id="demo-result" aria-live="polite">No prediction yet.</pre>
+        <div class="demo-meter" aria-hidden="true"><span id="demo-meter-fill"></span></div>
+        <details>
+          <summary class="demo-note">Show the 30 raw input values</summary>
+          <pre id="demo-vector"></pre>
+        </details>
+        <p class="demo-note">V1 to V28 are anonymised PCA components, so they have no plain-English meaning. The decision threshold is 0.5, as in the deployed API. Nothing you enter leaves your browser.</p>
+      </div>
+
+      <h2>Limitations</h2>
+      <ul>
+        <li><strong>Only inference deployment is automated.</strong> Training, including the GAN, ran by hand. There is no automated data ingestion.</li>
+        <li><strong>10-epoch training</strong>, so precision and recall sit below the paper's figures.</li>
+        <li><strong>One public dataset.</strong> It is PCA-anonymised with no demographic fields, so fairness across groups could not be measured at all.</li>
+        <li><strong>A single-node AKS cluster with no autoscaling</strong>, and 30-second load tests run from my own machine, so latency includes the network.</li>
+        <li><strong>The manual baseline is one run, by me.</strong></li>
+        <li><strong>Zero delta is helped by a deterministic MLP.</strong> A stochastic model might not reproduce exactly across environments.</li>
+        <li><strong>No model registry.</strong> MLflow was deferred, so model versions rely on timestamped filenames. Images are tagged with the git SHA.</li>
+        <li><strong>The deployed checkpoint, including the GAN generator weights, is in the public repo.</strong> The in-browser demo ships only the classifier.</li>
+      </ul>
+
+      <h3>Security gaps I identified but did not close</h3>
+      <p>This is a research prototype in a production-like setting, not a production system. The dissertation lists what would have to change first:</p>
+      <ul>
+        <li>The API loads the checkpoint with <code>torch.load(weights_only=False)</code>, which allows arbitrary code execution from a malicious file.</li>
+        <li>Plain HTTP with no TLS, and no API authentication.</li>
+        <li>No request or audit logging, and no data-retention controls.</li>
+        <li>No Kubernetes NetworkPolicies.</li>
+        <li>No security or vulnerability scanning in CI/CD, no encryption at rest for model artefacts, and no drift detection.</li>
+      </ul>
+      <p>What does exist: a non-root container user, a slim image, resource limits, health probes, SHA-tagged images and deployment logs in GitHub Actions.</p>
+
+      <h2>What I would do next</h2>
+      <ul>
+        <li>Add a model registry (MLflow or DVC) so model artefacts are versioned and traceable, not just images.</li>
+        <li>Harden the service: TLS ingress, OAuth2 or mTLS, a safe model format (<code>weights_only=True</code>, ONNX or SafeTensors), NetworkPolicies and audit logging.</li>
+        <li>Run training as a Kubernetes batch job so it goes through the same gates.</li>
+        <li>Run 5 to 15 minute load tests from a load generator inside the same region.</li>
+        <li>Replace the <code>sed</code> manifest patching with Kustomize or Helm.</li>
+        <li>Plan costs, and compare against serverless options.</li>
+      </ul>
+
+      <h2>Credits</h2>
+      <p>GA-GAN architecture adapted from Ge et al. (2025). Dataset: the European credit card fraud dataset (Kaggle: mlg-ulb/creditcardfraud). The demo uses only the classifier weights I trained, and synthetic inputs.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load testing a fraud model on AKS vs minikube | Zero Trust Issues</title>
+  <meta name="description" content="Locust at 10, 50 and 100 users against the same fraud model on minikube and AKS: 15 ms median latency, 267.8 requests a second, 7% of the CPU limit, and why the first deploy took 8 minutes.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/load-testing-fraud-model-aks-minikube/">
+  <meta property="og:title" content="Load testing a fraud model on AKS vs minikube">
+  <meta property="og:description" content="15 ms median latency at 100 users on AKS, a minikube cluster that flatlined at 20 requests a second, a service using 7% of its CPU limit, and cold versus warm CD runs.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/load-testing-fraud-model-aks-minikube/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>Load testing a fraud model on AKS vs minikube</h1>
+        <div class="article-meta">November 2026 · 6 min read</div>
+      </div>
+
+      <p>Getting a model to make the right decisions is one question. Getting it to make them fast enough, under load, without falling over, is another. For my MSc I'd already shown that my fraud model made <a href="/articles/same-model-three-environments/">identical decisions in three environments</a>. The next question was what it costs to run: latency, throughput and resources once real concurrency hits it.</p>
+
+      <p>I set a target before I started: p99 latency under 500 ms at 100 concurrent users, with zero failed requests. Then I pointed Locust at the same service on two platforms.</p>
+
+      <h2>The setup</h2>
+
+      <p>The service is a FastAPI app wrapping a 13,501-parameter fraud classifier, packaged in a slim Python image with CPU-only PyTorch and one uvicorn worker. It exposes <code>/health</code>, <code>/predict</code> and <code>/metrics</code>.</p>
+
+      <p>The two platforms:</p>
+
+      <ul>
+        <li><strong>Minikube:</strong> a local single-machine Kubernetes cluster.</li>
+        <li><strong>AKS:</strong> Azure Kubernetes Service, one Standard_D2als_v7 node (2 vCPU, 4 GB, AMD64), 2 replicas behind a LoadBalancer. Each pod requests 250m CPU and 256Mi memory, with limits of 500m and 512Mi. No autoscaling.</li>
+      </ul>
+
+      <p>Locust ran 10, 50 and 100 concurrent users for 30 seconds at each level, from my own machine. The task mix was 8 single-transaction predictions to 2 batch predictions (5 transactions each) to 1 health check, which is closer to real traffic than hammering one endpoint.</p>
+
+      <h2>The headline numbers</h2>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Users</th><th>Platform</th><th class="num">Throughput (rps)</th><th class="num">p50</th><th class="num">p95</th><th class="num">p99</th></tr></thead>
+          <tbody>
+            <tr><td>10</td><td>Minikube</td><td class="num">19.1</td><td class="num">180 ms</td><td class="num">420 ms</td><td class="num">500 ms</td></tr>
+            <tr><td>10</td><td>AKS</td><td class="num">29.3</td><td class="num">15 ms</td><td class="num">22 ms</td><td class="num">43 ms</td></tr>
+            <tr><td>50</td><td>Minikube</td><td class="num">19.9</td><td class="num">1,800 ms</td><td class="num">2,800 ms</td><td class="num">4,200 ms</td></tr>
+            <tr><td>50</td><td>AKS</td><td class="num">133.5</td><td class="num">15 ms</td><td class="num">24 ms</td><td class="num">61 ms</td></tr>
+            <tr><td>100</td><td>Minikube</td><td class="num">20.8</td><td class="num">4,200 ms</td><td class="num">5,100 ms</td><td class="num">8,300 ms</td></tr>
+            <tr><td>100</td><td>AKS</td><td class="num">267.8</td><td class="num">15 ms</td><td class="num">27 ms</td><td class="num">99 ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Zero failures at every level on both platforms. Nothing timed out, nothing returned an error. But the two platforms behaved completely differently.</p>
+
+      <h2>Minikube hit a wall at 20 requests a second</h2>
+
+      <p>Look at minikube's throughput column: 19.1, 19.9, 20.8. It barely moved as I went from 10 users to 100. What moved instead was latency. The median went from 180 ms to 1.8 seconds to 4.2 seconds, and p99 reached 8.3 seconds at 100 users.</p>
+
+      <p>That's the classic shape of a saturated service. Once it's handling as many requests as it can, extra users don't get served faster. They queue. Every new user adds waiting time for everyone. The fact that there were zero failures is almost misleading here: nobody got an error, but at 100 users a fraud check taking several seconds is not a working fraud check.</p>
+
+      <p>I don't want to overstate the comparison. Minikube is a development tool, and I'm comparing it with a dedicated cloud node, so I'd expect AKS to win. The point of testing both wasn't to crown a winner. It was to make sure I didn't draw conclusions about the service from a platform that was the bottleneck.</p>
+
+      <h2>AKS stayed flat at 15 ms</h2>
+
+      <p>On AKS, the median latency was 15 ms at 10 users, 15 ms at 50 and 15 ms at 100. Throughput scaled almost linearly with users, from 29.3 to 133.5 to 267.8 requests a second. The p99 at 100 users was 99 ms, against my 500 ms target.</p>
+
+      <p>At 100 users, that's roughly 280 times lower median latency and 12.9 times the throughput of minikube.</p>
+
+      <p>Where do the 15 ms go? The dissertation's breakdown puts about 5 ms on the HTTP round trip and about 2 ms on the model's forward pass, with every other step under a millisecond. Treat those as estimates rather than separately measured timings. The important caveat is that I ran Locust from my own machine, so every latency number includes the network trip to Azure and back. The service itself is faster than these numbers suggest.</p>
+
+      <h2>The 7% CPU finding</h2>
+
+      <p>This is the number that surprised me most. While Locust was running, I sampled pod resources with <code>kubectl top</code> every 5 seconds:</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Load</th><th class="num">CPU avg</th><th class="num">CPU peak</th><th class="num">Memory</th><th class="num">Peak vs 500m limit</th></tr></thead>
+          <tbody>
+            <tr><td>Idle</td><td class="num">1m</td><td class="num">1m</td><td class="num">165 MiB</td><td class="num">0.2%</td></tr>
+            <tr><td>10 users</td><td class="num">1m</td><td class="num">1m</td><td class="num">165 MiB</td><td class="num">0.2%</td></tr>
+            <tr><td>50 users</td><td class="num">3 to 4m</td><td class="num">4m</td><td class="num">165 MiB</td><td class="num">0.8%</td></tr>
+            <tr><td>100 users</td><td class="num">4m</td><td class="num">35m</td><td class="num">165 MiB</td><td class="num">7.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>At 100 concurrent users and 267.8 requests a second, the busiest moment used 35 millicores: 7% of the CPU limit. The average was 4 millicores. Memory sat at about 165 MiB the whole time and didn't change with load.</p>
+
+      <p>Two honest caveats. The 35m peak comes from the very last samples of the run, so it might be the start of a climb rather than a ceiling. And 30 seconds is short. My dissertation includes an extrapolation that the service could take around 1,400 requests a second before saturating, but that's arithmetic, not a measurement, and I wouldn't quote it as a capacity figure.</p>
+
+      <p>What I am confident of: at the load I tested, the model was nowhere near CPU-bound. A 13,501-parameter MLP is tiny, and the work per request is mostly HTTP handling, not maths. That has real implications. On these numbers, the CPU request of 250m is generous for this service, and if I were running it for longer I'd right-size it and spend the money elsewhere. It also means the honest answer to "how far does it scale?" is "I didn't find the limit". My load generator was my own machine, and I suspect it ran out of steam before the service did.</p>
+
+      <h2>Cold vs warm deployments</h2>
+
+      <p>Latency at runtime is half of the story. The other half is how long it takes to get a new version running. The CD pipeline times itself, and I recorded two consecutive runs:</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Run</th><th class="num">Test + build</th><th class="num">Deploy</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            <tr><td>Cold</td><td class="num">2m 19s</td><td class="num">5m 38s</td><td class="num">7m 57s</td></tr>
+            <tr><td>Warm</td><td class="num">2m 05s</td><td class="num">1m 10s</td><td class="num">3m 15s</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Test and build barely changed. The deploy stage dropped 79%, and the total dropped 59%. The deploy stage is where all the cluster work happens: applying manifests, waiting for the rolling update, health-checking the new pods. That's the part a warm run does most cheaply.</p>
+
+      <p>Two runs is not a distribution, so I treat these as indicative. But the comparison with the manual path is the interesting bit. Deploying by hand took me about 2 minutes. The pipeline is slower, even warm.</p>
+
+      <p>So why bother? Because the 2-minute manual path has no tests, no evaluation gate, no traceability and no rollback. When manual cloud deployments went wrong during the project, each incident took 30 to 60 minutes to untangle. The pipeline's value isn't speed. It's that every deployment goes through the same checks whether I'm careful that day or not.</p>
+
+      <h2>What I'd change next time</h2>
+
+      <ul>
+        <li><strong>Longer tests.</strong> 5 to 15 minutes per level instead of 30 seconds, so warm-up effects and slow leaks have time to show.</li>
+        <li><strong>A load generator in the same region,</strong> so latency reflects the service rather than my connection.</li>
+        <li><strong>Push until it breaks.</strong> I proved it handles 100 users comfortably. I didn't find where it stops.</li>
+        <li><strong>Autoscaling.</strong> One node and no HPA was fine at this load, but it means I didn't test how the service behaves when it scales.</li>
+      </ul>
+
+      <p>The short version: on AKS, the model met its latency target with a lot of room to spare, at a fraction of its CPU allowance. The bottleneck in my setup was never the model. The full results and architecture are on the <a href="/projects/automated-gan-deployment/">project page</a>, and the governance side is in <a href="/articles/gan-fraud-detection-governance/">what the project taught me about AI governance</a>.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

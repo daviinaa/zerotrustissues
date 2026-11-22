@@ -1,0 +1,65 @@
+# Deploy the personal site (plain static HTML in public/) to Cloudflare Pages.
+# Pull request to main: checks, then a preview deploy (URL in the job log).
+# Push to main: checks, then a production deploy.
+#
+# Secrets (Settings, Environments, on both "preview" and "production"):
+#   CLOUDFLARE_API_TOKEN   token with only "Account, Cloudflare Pages, Edit"
+#   CLOUDFLARE_ACCOUNT_ID  the Cloudflare account id
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PAGES_PROJECT: zerotrustissues   # Cloudflare Pages project name; also sets the <name>.pages.dev address
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Required files exist
+        run: for f in index.html 404.html _headers _redirects robots.txt sitemap.xml; do test -f "public/$f" || { echo "missing public/$f"; exit 1; }; done
+
+      - name: No placeholders
+        run: |
+          if grep -rnE 'REPLACE_|your-domain|example\.com|\[YOU' public; then echo "Placeholder text found"; exit 1; fi
+
+      - name: No em dashes in pages
+        run: |
+          if grep -rn $'—' --include='*.html' public; then echo "Em dash found (house style)"; exit 1; fi
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    environment:
+      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: pages deploy public --project-name ${{ env.PAGES_PROJECT }} --branch ${{ github.head_ref || github.ref_name }} --commit-hash ${{ github.sha }}

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zero-trust architecture for ML platforms | Zero Trust Issues</title>
+  <meta name="description" content="How I designed a zero-trust development environment for engineers working with highly sensitive ML data.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/zero-trust-ml-platforms/">
+  <meta property="og:title" content="Zero-trust architecture for ML platforms: lessons from the trenches">
+  <meta property="og:description" content="How I designed a zero-trust development environment for engineers working with highly sensitive ML data.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/zero-trust-ml-platforms/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>Zero-trust architecture for ML platforms: lessons from the trenches</h1>
+        <div class="article-meta">November 2026 · 7 min read</div>
+      </div>
+
+      <p>When I joined one of my previous employers, the ML team had a problem. They were working with some of the most sensitive data you can imagine (highly sensitive personal data), and the existing development environment was basically "SSH into a server and hope nobody's watching."</p>
+
+      <p>I was brought in to fix the infrastructure. What I ended up building was a zero-trust development platform designed from the ground up for ML workloads handling sensitive data. And honestly, it taught me more about AI safety than any paper I've read.</p>
+
+      <h2>Why ML platforms need zero-trust</h2>
+
+      <p>Let me be blunt about this: most ML development environments are security nightmares. Data scientists need access to large datasets, GPU resources, and flexible tooling. Traditional security approaches (VPNs, perimeter firewalls, role-based access with broad permissions) don't work when your "perimeter" is a Jupyter notebook that can reach the internet.</p>
+
+      <p>Zero-trust flips this on its head. Instead of "trust everything inside the network," it's "trust nothing, verify everything, at every layer." Every request is authenticated. Every connection is encrypted. Every action is logged. No exceptions.</p>
+
+      <p>For ML workloads, this matters more than for typical web applications. Here's why:</p>
+
+      <ul>
+        <li><strong>The data is irreplaceable and sensitive.</strong> You can't un-leak personal data. There's no "rotate the password" equivalent for someone's identity.</li>
+        <li><strong>Models are intellectual property.</strong> A trained model represents months of compute and proprietary data. Exfiltrating a model is exfiltrating the business.</li>
+        <li><strong>ML workflows are inherently broad.</strong> Data scientists need to experiment, which means their tools need more flexibility than a typical microservice. That flexibility is a security surface.</li>
+      </ul>
+
+      <h2>How I designed the platform</h2>
+
+      <p>The architecture has four layers. Each one assumes the others might be compromised.</p>
+
+      <h3>Layer 1: Identity and access</h3>
+
+      <p>Every engineer accesses the platform through Cloudflare WARP with zero-trust authentication. No VPN. No "you're on the office network so you're fine." Every session is authenticated against AWS SSO, with MFA enforced, and permissions are scoped to exactly what that engineer needs for their current project.</p>
+
+      <p>I built programmatic IAM across the entire AWS estate: EKS, RDS, DynamoDB, Aurora, Bedrock, Lambda, OpenSearch. Every workload runs with least-privilege policies that I wrote myself. Not the AWS defaults. Not "admin access because it's easier." Actual least-privilege, tested and validated.</p>
+
+      <p>The result? 99.99% uptime without a single manual security gate slowing engineers down. You can have security AND developer experience. You just have to design for both.</p>
+
+      <h3>Layer 2: Network isolation</h3>
+
+      <p>Platform environments sit in isolated VPCs with no public internet egress. None. If an engineer needs to pull a package, it goes through an approved proxy. If a training job needs external data, it goes through an approved pipeline.</p>
+
+      <p>This sounds restrictive, and it is. But when you're handling sensitive personal data under GDPR, "restrictive" isn't a bug. It's the requirement. The network architecture makes data exfiltration physically impossible from the development environment. You can't leak what you can't reach.</p>
+
+      <h3>Layer 3: Data protection</h3>
+
+      <p>End-to-end encryption for everything. I built Python-based secure payload decryption APIs specifically for sensitive personal data, so engineers never see it in plaintext. KMS key rotation is automated. TLS is enforced on every internal connection. Encryption at rest for every data store.</p>
+
+      <p>DLP monitoring watches for patterns that might indicate data leakage: large file transfers, unusual query patterns, attempts to copy data to unapproved locations. It's not about distrusting engineers. It's about catching compromised credentials or accidentally-too-broad queries before they become incidents.</p>
+
+      <h3>Layer 4: Audit and compliance</h3>
+
+      <p>Everything (and I mean everything) gets logged. CloudWatch audit logging captures every API call, every data access, every permission change. These logs feed into our observability stack (Prometheus, Grafana, OpenSearch) where we've built alerts for anomalous behaviour.</p>
+
+      <p>When GDPR auditors ask "who accessed this person's data and when?", I can answer that question in minutes. Not because I keep a spreadsheet, but because the infrastructure answers it automatically.</p>
+
+      <h2>The ML-specific challenges nobody warns you about</h2>
+
+      <p>Standard zero-trust guides assume you're securing web applications or microservices. ML workloads are different, and I learned this the hard way.</p>
+
+      <p><strong>Training jobs are long-running.</strong> A model training job might run for hours or days. Traditional session-based authentication doesn't work when your "session" is a GPU process that runs overnight. I had to build a credential rotation mechanism that refreshes authentication tokens for long-running jobs without interrupting the training process.</p>
+
+      <p><strong>Data access patterns are unpredictable.</strong> A web application queries the same tables in predictable patterns. A data scientist exploring a dataset might run thousands of ad-hoc queries in an hour, then nothing for a week. Our anomaly detection had to account for this burstiness without flooding engineers with false-positive security alerts.</p>
+
+      <p><strong>Model artifacts are large and numerous.</strong> Every experiment generates model checkpoints, training logs, and evaluation results. Securing these without making the storage layer a bottleneck required careful architecture: encrypted S3 buckets with intelligent lifecycle policies and scoped access.</p>
+
+      <h2>What I'd do differently</h2>
+
+      <p>Honestly? I'd start with the observability layer. I built the network isolation and access controls first, which made sense from a security perspective. But in practice, the observability data is what let me tune everything else. Seeing actual usage patterns told me which permissions were too broad, which network rules were too restrictive, and where engineers were working around the system instead of with it.</p>
+
+      <p>I'd also invest more in self-service tooling from day one. Engineers shouldn't need to submit tickets to get access to a new dataset or spin up a training job. The goal is security that's invisible when you're doing the right thing and only becomes visible when something's wrong.</p>
+
+      <h2>Why this matters for AI safety</h2>
+
+      <p>The platform is a production security platform, not an AI safety research project. But the problems are the same. How do you ensure that powerful systems, whether they're ML models handling sensitive personal data or frontier AI models, operate within defined boundaries? How do you verify compliance continuously, not just at audit time? How do you build systems that are secure by default, not secure by policy?</p>
+
+      <p>Zero-trust for ML platforms is just zero-trust for AI systems, applied at a smaller scale. The patterns translate directly. And I think that's the most valuable thing I can bring to the AI safety conversation: not theoretical frameworks, but production experience building the kind of infrastructure that makes safety guarantees real.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

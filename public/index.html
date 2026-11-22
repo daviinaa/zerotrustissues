@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zero Trust Issues | Davina Anthony on AI, DevOps and security</title>
+  <meta name="description" content="Senior DevOps engineer writing about AI, DevOps, security and the overlap between all three.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/">
+  <meta property="og:title" content="Zero Trust Issues">
+  <meta property="og:description" content="Senior DevOps engineer writing about AI, DevOps, security and the overlap between all three.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="home-hero container">
+      <p class="status mono"><i aria-hidden="true"></i>Based in the UK · Senior DevOps engineer</p>
+      <h1>I build secure infrastructure for systems that matter, <em>and I want to help make AI one of them.</em></h1>
+      <div class="hero-foot">
+        <p class="hero-sub">Cloud security engineer with five years in regulated fintech. I write about infrastructure, security, and the governance questions that show up when you put models into production.</p>
+        <div class="hero-links">
+          <a class="btn" href="/projects/automated-gan-deployment/">See my MSc project <span aria-hidden="true">&rarr;</span></a>
+          <a class="btn btn-ghost" href="/articles/">Read the writing</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="container block">
+      <div class="block-head">
+        <p class="kicker">Selected work</p>
+        <a href="/projects/">All projects <span aria-hidden="true">&rarr;</span></a>
+      </div>
+
+      <a class="feature" href="/projects/automated-gan-deployment/">
+        <div class="feature-text">
+          <p class="kicker">MSc dissertation · 2026</p>
+          <h2>Automated deployment of a GAN-based fraud detection model</h2>
+          <p>A CI/CD pipeline that tests a GA-GAN fraud classifier, blocks deployment unless it clears four quality thresholds, then rolls it out to Azure Kubernetes Service with automatic rollback.</p>
+          <span class="feature-cta">Case study and in-browser demo <span aria-hidden="true">&rarr;</span></span>
+        </div>
+        <div class="feature-vis" aria-hidden="true">
+          <div class="pipe mono">
+            <span>test</span><i></i><span class="gate">gate</span><i></i><span>build</span><i></i><span>deploy</span>
+          </div>
+          <dl class="metrics">
+            <div><dt>AUC</dt><dd>0.946</dd></div>
+            <div><dt>p50 at 100 users</dt><dd>15 ms</dd></div>
+            <div><dt>Decisions changed across 3 environments</dt><dd>0</dd></div>
+          </dl>
+        </div>
+      </a>
+
+      <div class="pair">
+        <a class="mini" href="/articles/zero-trust-ml-platforms/">
+          <p class="kicker">Zero trust</p>
+          <h3>A zero-trust platform for sensitive ML work</h3>
+          <p>Cloudflare WARP access, VPC isolation and audit logging for engineers handling sensitive data.</p>
+        </a>
+        <a class="mini" href="/projects/">
+          <p class="kicker">Migration</p>
+          <h3>Poly-cloud migration for a payments platform</h3>
+          <p>30+ Terraform modules with PCI-DSS checks built in, and a zero-trust network designed from scratch.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="container block">
+      <div class="block-head">
+        <p class="kicker">Recent writing</p>
+        <a href="/articles/">All writing <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <div class="article-list">
+        <div class="article-item">
+          <a href="/articles/lay-of-the-land/">
+            <h3>Lay of the land: an LLM that reads your incidents</h3>
+            <div class="article-meta">Idea Jun 2026 · 5 min</div>
+            <p class="article-desc">One command that surveys every alert in a window and matches spikes to the day's releases. With a terminal mock.</p>
+          </a>
+        </div>
+                <div class="article-item">
+          <a href="/articles/guardrails-as-code/">
+            <h3>Guardrails as code: treating AI rules like IAM</h3>
+            <div class="article-meta">Idea May 2026 · 4 min</div>
+            <p class="article-desc">Per-role policy files for AI tools and MCP servers, enforced on the repo and the laptop. Try the role switcher.</p>
+          </a>
+        </div>
+        <div class="article-item">
+          <a href="/articles/prompt-book-and-anti/">
+            <h3>The prompt book and the anti book</h3>
+            <div class="article-meta">Idea Apr 2026 · 4 min</div>
+            <p class="article-desc">A shared wiki of prompts, an anti book of what not to ask, and why shorthand saves typing, not tokens.</p>
+          </a>
+        </div>
+        <div class="article-item">
+          <a href="/articles/load-testing-fraud-model-aks-minikube/">
+            <h3>Load testing a fraud model on AKS vs minikube</h3>
+            <div class="article-meta">Nov 2026 · 6 min</div>
+            <p class="article-desc">15 ms median latency at 100 users on AKS, a minikube cluster that flatlined at 20 requests a second, and why the first deploy took 8 minutes.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="container block now">
+      <p class="kicker">Now</p>
+      <ul>
+        <li><b>Consulting</b><span>Helping startups set up cloud infrastructure securely from day one.</span></li>
+        <li><b>Studying AI governance</b><span>Working toward the IAPP AIGP, with the EU AI Act, NIST AI RMF and ISO 42001.</span></li>
+        <li><b>Writing</b><span>How engineering controls like deployment gates and policy as code map onto AI safety.</span></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

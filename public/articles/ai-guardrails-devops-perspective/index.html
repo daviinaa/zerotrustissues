@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI guardrails from a DevOps engineer's perspective | Zero Trust Issues</title>
+  <meta name="description" content="Policy-as-code isn&#x27;t just for cloud compliance anymore. How DevOps patterns such as deployment gates and observability translate directly to AI governance.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/ai-guardrails-devops-perspective/">
+  <meta property="og:title" content="AI guardrails from a DevOps engineer&#x27;s perspective">
+  <meta property="og:description" content="Policy-as-code isn&#x27;t just for cloud compliance anymore. How DevOps patterns such as deployment gates and observability translate directly to AI governance.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/ai-guardrails-devops-perspective/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>AI guardrails from a DevOps engineer's perspective</h1>
+        <div class="article-meta">November 2026 · 9 min read</div>
+      </div>
+
+      <p>I've been reading a lot of AI governance literature lately: the EU AI Act, NIST AI RMF, ISO 42001, the usual suspects. And I keep having the same reaction: "We already know how to do this. We just call it something different."</p>
+
+      <p>I'm a DevOps engineer. I've spent years building systems that enforce compliance automatically: policy-as-code, automated testing, observability, deployment gates. The AI governance world is reinventing patterns that infrastructure engineers solved years ago. And the AI world could move a lot faster if they'd just talk to us.</p>
+
+      <h2>Policy-as-code: your AI governance secret weapon</h2>
+
+      <p>Let me explain policy-as-code for anyone who hasn't lived it. In cloud infrastructure, policy-as-code means writing your compliance requirements as executable rules that run automatically. Instead of a PDF that says "all S3 buckets must be encrypted," you write a rule that checks every S3 bucket and blocks deployment if one isn't encrypted.</p>
+
+      <p>At a payments company, I did this for PCI-DSS compliance across a system handling high transaction volumes. Every Terraform module I wrote (all 30+ of them) had compliance checks baked in. VNet configurations, NSG rules, IAM policies, encrypted storage, API gateway settings. If you tried to deploy something non-compliant, the pipeline caught it before it reached production.</p>
+
+      <p>Now look at the EU AI Act. It requires risk assessment, documentation, human oversight, transparency, and ongoing monitoring for high-risk AI systems. Every single one of these can be expressed as code:</p>
+
+      <ul>
+        <li><strong>Risk assessment:</strong> Automated checks against a risk classification framework. Is this model processing biometric data? Flag it as high-risk. Is it making decisions about creditworthiness? Same.</li>
+        <li><strong>Documentation:</strong> Model cards generated automatically from training pipeline metadata. You already have the information: training data sources, performance metrics, known limitations. Just pipe it into a template.</li>
+        <li><strong>Human oversight:</strong> Deployment gates that require manual approval for high-risk model updates. We do this for production deployments already. Adding a "governance review" gate is trivial.</li>
+        <li><strong>Transparency:</strong> API endpoints that return model explanations alongside predictions. Logging every inference with the input, output, and confidence score.</li>
+        <li><strong>Monitoring:</strong> Drift detection, fairness metrics tracked over time, alerting on performance degradation. This is just Prometheus and Grafana pointed at different metrics.</li>
+      </ul>
+
+      <p>I've built the infrastructure side of these patterns for cloud compliance: policy checks in the pipeline, approval gates, monitoring and alerting. Applying them to models is the next step, and the model side (model cards, explanations, fairness metrics) is the part I'm still learning.</p>
+
+      <h2>Observability as continuous compliance</h2>
+
+      <p>Here's where I think DevOps engineers have the biggest advantage in AI governance: we understand observability.</p>
+
+      <p>Most AI governance frameworks treat compliance as a point-in-time activity. You assess your system, document it, get it approved, and then... what? You wait for the next audit? That's like saying your application is secure because you ran a penetration test six months ago.</p>
+
+      <p>In DevOps, we moved past this years ago. Continuous monitoring, real-time alerting, automated incident response. In a previous role, my observability stack (Prometheus, Grafana, OpenSearch) reduced our MTTR by 35%. Not because the tools are magic, but because we could see what was happening in real time and respond before small problems became big ones.</p>
+
+      <p>AI systems need the same thing. Model fairness shouldn't be checked once during development and then forgotten. It should be monitored continuously. Performance degradation shouldn't be discovered during an annual review. It should trigger an alert at 3am, just like a spike in error rates would for a web application.</p>
+
+      <p>I built this for infrastructure monitoring. The patterns carry over to AI monitoring, and the tools are largely the same: Prometheus can track a model's prediction rates and confidence scores just as easily as it tracks request latency. Accuracy is harder, because the true labels often arrive days later, but the alerting side is the same. Much of the gap is cultural, not technical.</p>
+
+      <h2>The deployment gate pattern</h2>
+
+      <p>Let me describe a pattern I rely on in CI/CD pipelines, and then explain why I think it is one of the most useful governance mechanisms we have.</p>
+
+      <p>A deployment gate is a checkpoint in your pipeline that blocks progression unless certain conditions are met. In my MSc <a href="/projects/automated-gan-deployment/">GAN fraud detection pipeline</a>, the model evaluation gate checked four metrics against thresholds I set:</p>
+
+      <ul>
+        <li>AUC of at least 0.90</li>
+        <li>F1 of at least 0.70</li>
+        <li>Precision of at least 0.70</li>
+        <li>Recall of at least 0.65</li>
+      </ul>
+
+      <p>If any metric falls short, the script exits with an error, and nothing gets built or deployed. No exceptions. No "we'll fix it in the next release." The pipeline enforces the policy regardless of who's running it or what deadline they're under.</p>
+
+      <p>One honest limit: training in that project was manual. The gate checks the trained checkpoint the pipeline is about to ship. It does not retrain or evaluate new models on its own.</p>
+
+      <p>This is what governance frameworks call "automated controls." DevOps engineers call it "not shipping broken stuff." Same concept, different vocabulary.</p>
+
+      <p>The power of this pattern is that it removes the human tendency to cut corners under pressure. When the compliance check is automated and blocking, it doesn't matter that it's Friday evening and the CEO wants the new model live by Monday. The gate doesn't negotiate.</p>
+
+      <h2>The gap between governance and engineering</h2>
+
+      <p>So if the patterns already exist, why aren't AI systems using them? I think there are three reasons.</p>
+
+      <p><strong>First, vocabulary.</strong> Governance people say "risk assessment" and engineers say "pre-deployment checks." They're the same thing, but neither side recognises the other's terminology. I only made the connection because I'm studying both simultaneously.</p>
+
+      <p><strong>Second, organisational silos.</strong> Governance teams write policies. Engineering teams build systems. They don't talk to each other enough, and when they do, the governance team hands over a PDF and the engineering team nods politely and then ignores it because it's not actionable. Policy-as-code is the bridge. Turn the PDF into a rule engine and suddenly the engineers can actually implement it.</p>
+
+      <p><strong>Third, the AI community undervalues infrastructure.</strong> In AI research, the glamorous work is building new models, not building the systems that deploy and monitor them. But from a governance perspective, the deployment and monitoring infrastructure IS the governance mechanism. You can have the most carefully evaluated model in the world, and it's still ungoverned if you deploy it without monitoring and can't roll it back when something goes wrong.</p>
+
+      <h2>What I'm building toward</h2>
+
+      <p>I'm working toward my IAPP AIGP (AI Governance Professional) certification. But I'm approaching it as an engineer, not as a policy person. My goal is to be the person who can read a governance framework and translate it into Terraform modules, CI/CD gates, and monitoring dashboards.</p>
+
+      <p>I think that's the role that's missing in the AI governance ecosystem: the governance engineer. Not someone who writes policies and not someone who builds models, but someone who builds the infrastructure that makes policies real.</p>
+
+      <p>That's what I've been doing for cloud security my entire career. The AI application is just the next frontier.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

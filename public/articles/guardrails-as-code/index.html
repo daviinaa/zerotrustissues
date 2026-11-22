@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guardrails as code: treating AI rules like IAM | Zero Trust Issues</title>
+  <meta name="description" content="Companies already control what each employee can reach with IAM. AI tools need the same: per-role policy files for MCP servers, enforced on the repo and the laptop.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/guardrails-as-code/">
+  <meta property="og:title" content="Guardrails as code: treating AI rules like IAM">
+  <meta property="og:description" content="Companies already control what each employee can reach with IAM. AI tools need the same: per-role policy files for MCP servers, enforced on the repo and the laptop.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/guardrails-as-code/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>Guardrails as code: treating AI rules like IAM</h1>
+        <div class="article-meta">First sketched <time datetime="2026-05">May 2026</time> · Written November 2026 · 4 min read</div>
+      </div>
+
+      <p>I first sketched this in May 2026, and it is the idea I keep coming back to.</p>
+
+      <p>Every company already decides what each employee can reach. Your role gets you into some systems and keeps you out of others, and that is written down as IAM policy, not as a reminder in a handbook. AI tools have not caught up. An engineer, an analyst and a support agent often get the same assistant, connected to the same tools, with the same rules: whatever the person remembers from training.</p>
+
+      <p>My idea is simple: treat AI rules like IAM. Guardrails as code.</p>
+
+      <h2>What it looks like</h2>
+
+      <p>Each role gets a policy file. The file says which MCP servers that role can use, which tools inside them, and what the assistant must refuse to do for that role. The files live in Git, change through review, and get tested like any other config.</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>IAM</th><th>Guardrails as code</th></tr></thead>
+          <tbody>
+            <tr><td>Role</td><td>Job role profile: engineer, finance, support</td></tr>
+            <tr><td>Policy document</td><td>Guardrail policy file in a repo</td></tr>
+            <tr><td>Permission</td><td>Allowed MCP servers, tools and data</td></tr>
+            <tr><td>Enforcement point</td><td>The laptop, the repository</td></tr>
+            <tr><td>Audit log</td><td>A record of what the assistant was asked and what it ran</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Pick a role, then try a request:</p>
+
+      <figure class="widget gr-demo" id="gr-demo">
+        <div class="gr-top">
+          <div class="seg" role="group" aria-label="Role">
+            <button type="button" data-role="engineer" aria-pressed="true">Engineer</button>
+            <button type="button" data-role="support" aria-pressed="false">Support</button>
+            <button type="button" data-role="finance" aria-pressed="false">Finance</button>
+          </div>
+          <div class="seg" role="group" aria-label="Enforced on">
+            <button type="button" data-where="laptop" aria-pressed="true">Laptop</button>
+            <button type="button" data-where="repo" aria-pressed="false">Repo</button>
+          </div>
+        </div>
+        <div class="gr-grid">
+          <pre class="gr-file"><code id="gr-file"></code></pre>
+          <div class="gr-side">
+            <p class="kicker">MCP servers</p>
+            <ul class="gr-servers" id="gr-servers"></ul>
+            <p class="gr-lock" id="gr-lock"></p>
+          </div>
+        </div>
+        <div class="gr-try">
+          <p class="kicker">Ask the assistant</p>
+          <div class="gr-reqs" id="gr-reqs"></div>
+          <p class="gr-verdict" id="gr-verdict" aria-live="polite">Pick a request.</p>
+        </div>
+        <figcaption>Illustrative example. The roles, servers and rules are made up to show the idea.</figcaption>
+      </figure>
+
+      <h2>Where it is enforced</h2>
+
+      <p><strong>On the repository.</strong> Put the rules and the MCP configuration in the repository itself. Everyone who pulls or clones that repository has already cloned the rules with it, without having to think about it. The guardrails travel with the code.</p>
+
+      <p><strong>On the laptop.</strong> Repository rules have a weakness: the person who cloned them can edit them. So the stronger layer is a central policy installed on the laptop, managed by the company and not changeable by the user. I think this is the layer to build first.</p>
+
+      <h2>What I haven't solved yet</h2>
+
+      <ul>
+        <li>Roles change. Who updates the policy when someone moves teams?</li>
+        <li>Blocks that are too strict make people work around them with personal tools.</li>
+        <li>Rules about content (do not paste customer data) are harder to enforce than rules about access (cannot use this MCP server).</li>
+      </ul>
+
+      <p>This follows on from <a href="/articles/prompt-book-and-anti/">The prompt book and the anti book</a>, which is about writing good practice down. Guardrails as code is about enforcing it. For the same idea applied to models rather than the people using them, see <a href="/articles/ai-guardrails-devops-perspective/">AI guardrails from a DevOps engineer's perspective</a>.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <script src="/js/widgets.js" defer></script>
+</body>
+</html>

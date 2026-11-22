@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security-first cloud infrastructure | Zero Trust Issues</title>
+  <meta name="description" content="After years of cleaning up infrastructure messes, I started my own consultancy. These are the patterns I see over and over, and how to fix them.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/security-first-cloud-infrastructure/">
+  <meta property="og:title" content="Security-first cloud infrastructure: what startups get wrong and how to fix it">
+  <meta property="og:description" content="After years of cleaning up infrastructure messes, I started my own consultancy. These are the patterns I see over and over, and how to fix them.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/security-first-cloud-infrastructure/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>Security-first cloud infrastructure: what startups get wrong and how to fix it</h1>
+        <div class="article-meta">November 2026 · 7 min read</div>
+      </div>
+
+      <p>I started my consultancy because I kept seeing the same problems. Startup after startup, the story is the same: they move fast, ship features, grow the product, and then one day they realise their infrastructure is a house of cards held together by manual processes and hope.</p>
+
+      <p>By that point, fixing it is ten times harder than doing it right from the start would have been. And that's if they're lucky. If they're unlucky, they find out the hard way when something breaks in production or a security audit reveals gaps that take months to close.</p>
+
+      <p>So I started a consultancy that helps startups set up their cloud infrastructure right the first time. The name is a nod to Terraform state files, the source of truth for your infrastructure. Because that's what I believe in: your infrastructure should have a single, codified source of truth, not a collection of manual changes that nobody can fully explain.</p>
+
+      <h2>The three anti-patterns</h2>
+
+      <p>After years of cleaning up and building infrastructure across multiple companies, I see three patterns that cause 90% of startup infrastructure problems.</p>
+
+      <h3>Anti-pattern 1: IAM is an afterthought</h3>
+
+      <p>This one kills me. I've walked into environments where every developer has admin access to production AWS accounts. Where service accounts have wildcard permissions because someone got an "Access Denied" error and the fix was to give it full access to everything. Where there are IAM keys that haven't been rotated in two years.</p>
+
+      <p>In one role, I rebuilt the entire IAM architecture from scratch. Programmatic policies for every workload: EKS, RDS, DynamoDB, Aurora, Bedrock, Lambda, OpenSearch. Least-privilege for everything. And you know what? The engineers barely noticed. Because well-designed IAM doesn't slow you down. Bad IAM slows you down because every permission error becomes a ticket that someone has to investigate.</p>
+
+      <p>The fix is simple: start with zero permissions and add what's needed, not the other way around. Codify your IAM policies in Terraform. Review them like you review code. And rotate your keys automatically. That's what KMS is for.</p>
+
+      <h3>Anti-pattern 2: No infrastructure as code</h3>
+
+      <p>If your infrastructure isn't in code, you don't have infrastructure. You have a collection of snowflake resources that nobody fully understands and nobody can reproduce.</p>
+
+      <p>At a payments company, I wrote 30+ Terraform modules for a poly-cloud migration handling high transaction volumes. VNets, NSGs, IAM policies, API Gateway, encrypted storage: everything codified, version-controlled, and peer-reviewed. When we needed to replicate the environment for disaster recovery, it was a terraform apply away. When we needed to prove compliance for PCI-DSS, the auditors could read the code.</p>
+
+      <p>This isn't optional. If you're a startup handling customer data (and you are), you need to be able to answer "what changed and when?" for every piece of your infrastructure. Git history on Terraform files gives you that automatically. The AWS console's "Recent events" page does not.</p>
+
+      <h3>Anti-pattern 3: Security is separate from engineering</h3>
+
+      <p>This is the big one, and it's cultural, not technical. In too many startups, security is something that gets bolted on after the fact. The engineering team builds the product, and then someone asks "is this secure?" and everyone gets uncomfortable.</p>
+
+      <p>Security-first means security is part of the engineering workflow, not a separate process. It means your CI/CD pipeline includes security scanning. It means your Terraform modules have compliance checks built in. It means your developers are trained to think about security implications as they code, not after they ship.</p>
+
+      <p>I've seen what happens when you treat security as separate: it becomes adversarial. The security team says no, the engineering team finds workarounds, and you end up with worse security than if you'd never had a security team at all. When security is integrated into the engineering workflow, it becomes a quality attribute like performance or reliability: something everyone owns.</p>
+
+      <h2>The cost argument</h2>
+
+      <p>Every startup founder I talk to has the same concern: "We can't afford to invest in infrastructure right now. We need to ship features."</p>
+
+      <p>Here's what I tell them: you can't afford not to. The companies I've worked for handle high transaction volumes and sensitive personal data. When they invested in infrastructure early, the cost was manageable. When competitors tried to bolt on security and compliance later, the cost was orders of magnitude higher.</p>
+
+      <p>In an earlier role, I reduced cloud spend by 43% just by implementing proper architecture: right-sized instances, intelligent use of reserved capacity, elimination of redundant resources that had accumulated from manual provisioning. Good infrastructure isn't expensive. Bad infrastructure is expensive.</p>
+
+      <h2>What this has to do with AI</h2>
+
+      <p>You might be wondering why someone who runs a cloud infrastructure consultancy is writing about AI governance. Here's the connection: AI systems run on infrastructure. The same security, reliability, and compliance patterns that matter for cloud infrastructure matter for AI workloads.</p>
+
+      <p>If your Kubernetes cluster can't enforce resource quotas for GPU workloads, your model training costs will spiral. If your data pipeline doesn't have access controls, your training data is compromised. If your deployment pipeline doesn't have automated testing gates, your model is ungoverned.</p>
+
+      <p>The foundation matters. I've spent my career building foundations, and I'm extending that into the AI governance space because the foundation is where safety starts. Not in the model architecture, not in the training data selection, but in the infrastructure that makes everything else possible, and controllable.</p>
+
+      <p>That's what my consultancy is about. Getting the foundation right, so everything built on top of it has a chance of being secure, compliant, and governable.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

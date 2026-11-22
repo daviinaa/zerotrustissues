@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects | Zero Trust Issues</title>
+  <meta name="description" content="Infrastructure, security and ML platform projects, including an MSc pipeline that deploys a GAN-based fraud classifier to Azure Kubernetes Service.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/projects/">
+  <meta property="og:title" content="Projects by Davina Anthony">
+  <meta property="og:description" content="Infrastructure, security and ML platform projects, including an MSc pipeline that deploys a GAN-based fraud classifier to Azure Kubernetes Service.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/projects/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/">Writing</a>
+        <a href="/projects/" aria-current="page">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Projects</h1>
+      <p>A selection of infrastructure, security and ML platform projects: production systems I've designed and shipped at work, plus my MSc research project.</p>
+    </section>
+
+    <div class="project-grid">
+      <div class="project-card">
+        <h3><a href="/projects/automated-gan-deployment/">GAN-Based Fraud Detection Pipeline</a></h3>
+        <p>MSc dissertation: an automated CI/CD pipeline that deploys a GA-GAN credit card fraud classifier (adapted from Ge et al., 2025) to Azure Kubernetes Service. Every push to main runs the unit tests (91% coverage) and a model evaluation gate (AUC, F1, precision and recall thresholds) before a SHA-tagged image is rolled out, health-checked and rolled back automatically on failure. Predictions were identical across local, minikube and AKS for all 56,962 test transactions, and AKS held a 15 ms median latency at 100 concurrent users. Training stays manual; Prometheus and Grafana for monitoring.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">Python</span>
+          <span class="tech-tag">Kubernetes</span>
+          <span class="tech-tag">GANs</span>
+          <span class="tech-tag">Docker</span>
+          <span class="tech-tag">CD4ML</span>
+          <span class="tech-tag">Prometheus</span>
+          <span class="tech-tag">FastAPI</span>
+          <span class="tech-tag">GitHub Actions</span>
+          <span class="tech-tag">Azure AKS</span>
+        </div>
+        <p class="card-link"><a href="/projects/automated-gan-deployment/">Project page and demo →</a></p>
+      </div>
+
+      <div class="project-card">
+        <h3>Zero-Trust ML Platform</h3>
+        <p>Zero-trust development environment for engineers handling highly sensitive ML data. Cloudflare WARP authentication, AWS SSO integration, VPC isolation with no public internet egress, DLP monitoring, CloudWatch audit logging, encrypted storage.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">AWS</span>
+          <span class="tech-tag">Terraform</span>
+          <span class="tech-tag">Cloudflare ZT</span>
+          <span class="tech-tag">KMS</span>
+          <span class="tech-tag">GDPR</span>
+          <span class="tech-tag">Python</span>
+        </div>
+        <p class="card-link"><a href="/articles/zero-trust-ml-platforms/">Read the article →</a></p>
+      </div>
+
+      <div class="project-card">
+        <h3>Poly-Cloud Migration</h3>
+        <p>Migrated payment processing infrastructure handling high transaction volumes from AWS to Azure. Designed zero-trust network architecture, IAM, and encryption from scratch. 30+ Terraform modules with PCI-DSS compliance checks built into every module.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">Azure</span>
+          <span class="tech-tag">AWS</span>
+          <span class="tech-tag">Terraform</span>
+          <span class="tech-tag">Kubernetes</span>
+          <span class="tech-tag">PCI-DSS</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <h3>Cloud consultancy</h3>
+        <p>My cloud infrastructure consultancy. We help startups set up security-first cloud architecture from day one, or come in and clean up existing infrastructure. Named after Terraform state files: the source of truth for your infrastructure.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">Terraform</span>
+          <span class="tech-tag">AWS</span>
+          <span class="tech-tag">GCP</span>
+          <span class="tech-tag">Security</span>
+          <span class="tech-tag">IaC</span>
+        </div>
+        <p class="card-link"><a href="/articles/security-first-cloud-infrastructure/">Read the article →</a></p>
+      </div>
+
+      <div class="project-card">
+        <h3>Programmatic IAM Architecture</h3>
+        <p>Rebuilt the entire IAM architecture for a regulated platform. Least-privilege policies for every workload: EKS, RDS, DynamoDB, Aurora, Bedrock, Lambda and OpenSearch. All codified in Terraform. Achieved 99.99% uptime without manual security gates.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">AWS IAM</span>
+          <span class="tech-tag">Terraform</span>
+          <span class="tech-tag">Policy-as-Code</span>
+          <span class="tech-tag">SSO</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <h3>Cross-Region Disaster Recovery Migration</h3>
+        <p>Moved large-scale datasets between cloud regions with zero data loss. Built comprehensive observability stack (Prometheus, Grafana, OpenSearch) that reduced MTTR by 35%.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">AWS</span>
+          <span class="tech-tag">DR</span>
+          <span class="tech-tag">Prometheus</span>
+          <span class="tech-tag">Grafana</span>
+          <span class="tech-tag">OpenSearch</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

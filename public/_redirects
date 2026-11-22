@@ -1,0 +1,11 @@
+# Cloudflare Pages redirects for the personal site. Path-only rules; Pages already
+# serves /about/ for /about and drops index.html, so those need no rules here.
+# Domain-level redirects (apex to www, *.pages.dev to the custom domain) cannot live
+# in this file: use a Cloudflare Bulk Redirect or Redirect Rule (see DEPLOY.md).
+
+/writing      /articles/  301
+/writing/     /articles/  301
+/blog         /articles/  301
+/blog/*       /articles/:splat  301
+/work         /projects/  301
+/work/        /projects/  301

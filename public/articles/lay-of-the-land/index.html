@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lay of the land: an LLM that reads your incidents | Zero Trust Issues</title>
+  <meta name="description" content="Not living off the land. A command that surveys every alert and incident in a window, follows the spike through the stack and matches it to the day's releases.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/lay-of-the-land/">
+  <meta property="og:title" content="Lay of the land: an LLM that reads your incidents">
+  <meta property="og:description" content="Not living off the land. A command that surveys every alert and incident in a window, follows the spike through the stack and matches it to the day's releases.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/lay-of-the-land/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>Lay of the land: an LLM that reads your incidents</h1>
+        <div class="article-meta">First sketched <time datetime="2026-06">June 2026</time> · Written November 2026 · 5 min read</div>
+      </div>
+
+      <p>First, the name. In security, LOTL usually means <a href="https://www.cisa.gov/resources-tools/resources/identifying-and-mitigating-living-land-techniques">living off the land</a>: attackers using tools already on a system. This is not that. Lay of the land means what it says: a survey of everything that happened over a period of time, and what it was most likely linked to.</p>
+
+      <p>I sketched it in June 2026 as a command: <code>lotl --past-day</code>, <code>lotl --3h</code>. It pulls every incident, alert and anomaly in that window into one report, which can also go to email or a team channel. Try it:</p>
+
+      <figure class="widget term-demo" id="lotl-demo">
+        <div class="term-bar">
+          <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <div class="term-tabs" role="group" aria-label="Choose a command">
+            <button type="button" class="term-tab" data-run="day" aria-pressed="true">lotl --past-day</button>
+            <button type="button" class="term-tab" data-run="3h" aria-pressed="false">lotl --3h</button>
+          </div>
+        </div>
+        <pre class="term-out" aria-live="polite"><code id="lotl-out">$ lotl --past-day</code></pre>
+        <div class="spike">
+          <div class="spike-head"><span id="lotl-metric">CPU, web tier</span><span class="spike-key"><i class="k-line"></i>metric <i class="k-deploy"></i>release <i class="k-alert"></i>alert</span></div>
+          <svg id="lotl-chart" viewBox="0 0 600 160" role="img" aria-label="Mock chart of the metric over the window, with the release and alerts marked"></svg>
+          <div class="spike-axis" id="lotl-axis"></div>
+        </div>
+        <figcaption>Illustrative mock. Not output from a real system.</figcaption>
+      </figure>
+
+      <p>It comes from combining my background in infrastructure with LLMs.</p>
+
+      <h2>How I set it up</h2>
+
+      <p>At work I have set up a version of this. The assistant has MCP connections to New Relic, PagerDuty and Rollbar, plus access to our GitHub environment. Our internal tools already monitor CPU and memory, so it can watch those too.</p>
+
+      <h2>How it follows a spike</h2>
+
+      <p>When something spikes in New Relic, it checks what the spike is likely linked to, one layer at a time:</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>If the spike is in</th><th>It looks at</th></tr></thead>
+          <tbody>
+            <tr><td>PHP</td><td>The web servers</td></tr>
+            <tr><td>External services</td><td>Kubernetes</td></tr>
+            <tr><td>Redis</td><td>Redis, front end and back end</td></tr>
+            <tr><td>Database</td><td>The SQL instances, for a CPU or memory spike</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Something links to something that links to something else. It is a cascade.</p>
+
+      <h2>Patterns</h2>
+
+      <p>The other half is pattern matching. Every company has patterns of events. Lay of the land watches what happened over previous days and asks: where has this pattern happened before? It also checks what code was released that day and matches the release against the likely cause. The aim is to say "this is the likely issue" and, over time, to predict when it will happen next.</p>
+
+      <h2>What I'm still working out</h2>
+
+      <ul>
+        <li>How the report shows its evidence: which alert, which release, which timestamp.</li>
+        <li>What it says when it is not sure, and what stops it naming a cause that is not in the data.</li>
+        <li>Whether the MCP connections should all be read-only, and what monitoring data should reach the model at all.</li>
+        <li>Log lines are partly written by outside users. One could carry an instruction the model then follows.</li>
+      </ul>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <script src="/js/widgets.js" defer></script>
+</body>
+</html>

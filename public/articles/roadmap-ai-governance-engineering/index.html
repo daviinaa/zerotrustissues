@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My roadmap to AI governance engineering | Zero Trust Issues</title>
+  <meta name="description" content="Why I&#x27;m moving from pure infrastructure to AI governance, and the certification path I&#x27;m taking to get there.">
+  <link rel="canonical" href="https://zerotrustissues.pages.dev/articles/roadmap-ai-governance-engineering/">
+  <meta property="og:title" content="My roadmap to AI governance engineering">
+  <meta property="og:description" content="Why I&#x27;m moving from pure infrastructure to AI governance, and the certification path I&#x27;m taking to get there.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zerotrustissues.pages.dev/articles/roadmap-ai-governance-engineering/">
+  <meta property="og:site_name" content="Zero Trust Issues">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="container">
+      <a href="/" class="nav-logo"><span class="mark" aria-hidden="true">ZT</span>Zero Trust Issues</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/articles/" aria-current="page">Writing</a>
+        <a href="/projects/">Projects</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="article-body">
+      <div class="article-header">
+        <h1>My roadmap to AI governance engineering</h1>
+        <div class="article-meta">November 2026 · 6 min read</div>
+      </div>
+
+      <p>Six months ago, I sat down and mapped out a plan to become an AI governance engineer. Not a policy analyst. Not a compliance officer. An engineer who builds the infrastructure that makes AI governance real.</p>
+
+      <p>Here's why, and here's how.</p>
+
+      <h2>Why I'm making this shift</h2>
+
+      <p>I've been a cloud security and DevOps engineer for five years. I've built zero-trust architectures, managed PCI-DSS compliance for fintech platforms processing high transaction volumes, and designed infrastructure that handles sensitive personal data under GDPR.</p>
+
+      <p>And here's what I've realised: every single problem I've solved in cloud security is showing up in AI, just at a bigger scale with higher stakes. Adversarial robustness? That's threat modelling. Model monitoring? That's observability. Deployment controls? That's CI/CD gates. Bias detection? That's automated compliance testing.</p>
+
+      <p>I'm not pivoting away from infrastructure engineering. I'm extending it. The same skills that make me good at securing cloud platforms are exactly what's needed to make AI systems safe and governable. The gap is that not enough infrastructure engineers are working on this yet.</p>
+
+      <h2>The IAPP AIGP certification path</h2>
+
+      <p>The backbone of my study plan is the IAPP AIGP (AI Governance Professional) certification. It covers four domains:</p>
+
+      <p><strong>Domain 1: Foundational AI concepts.</strong> This covers how AI and ML systems actually work: training, inference, the different model architectures. For me, this was mostly review because of my MSc in Cyber Security where I built a GAN-based fraud detection pipeline. But I'm filling gaps in areas like transformer architectures and large language models that weren't part of my dissertation work.</p>
+
+      <p><strong>Domain 2: AI governance frameworks.</strong> This is the policy landscape: EU AI Act, NIST AI RMF, ISO 42001, OECD AI Principles. I'm reading these cover to cover, not just the summaries. And I'm reading them as an engineer: for every requirement, I'm asking "how would I implement this in a CI/CD pipeline?"</p>
+
+      <p><strong>Domain 3: AI risks and mitigation.</strong> Bias, fairness, transparency, accountability, safety, security. Each of these is a category of risk that needs both policy controls and technical controls. I've already built technical controls for security risks in my cloud infrastructure work. Now I'm learning how those same patterns apply to AI-specific risks.</p>
+
+      <p><strong>Domain 4: Organisational governance.</strong> How you actually structure an organisation to govern AI responsibly. Roles, responsibilities, review boards, incident response. This is the domain where I have the least experience, but it maps to how I've seen security governance work in fintech: compliance teams, audit processes, escalation procedures.</p>
+
+      <h2>What I'm reading</h2>
+
+      <p>Beyond the AIGP study materials, I'm going deep on a few things:</p>
+
+      <p>The EU AI Act is the big one. It's the most comprehensive AI regulation we've got, and it's where the industry is heading whether people like it or not. I'm reading it with an engineer's eye: what's actually enforceable, what's technically feasible, what's going to be nightmarish to implement.</p>
+
+      <p>NIST AI RMF is more practical. It gives you a structured approach to AI risk management that maps better to engineering workflows than the EU AI Act does. The four functions (Govern, Map, Measure, Manage) align surprisingly well with how I think about infrastructure operations.</p>
+
+      <p>ISO 42001 is the management system standard for AI. If you've worked with ISO 27001 for information security (and I have, through multiple compliance audits), the structure is familiar. It's about building repeatable processes, not just checking boxes.</p>
+
+      <p>I've also been studying agentic AI governance, which is where things get really interesting. When AI systems can take autonomous actions (executing code, making API calls, interacting with other systems), the governance challenges multiply. Traditional monitoring and human-in-the-loop patterns need rethinking.</p>
+
+      <h2>The engineer advantage</h2>
+
+      <p>Here's what I think most people in AI governance are missing: the best governance is governance you can't bypass.</p>
+
+      <p>A policy document that says "all high-risk AI models must undergo fairness assessment before deployment" is nice. A CI/CD gate that automatically runs fairness checks and blocks deployment if they fail is governance. The first one depends on people reading the document and choosing to comply. The second one enforces compliance regardless of human behaviour.</p>
+
+      <p>That's the engineer advantage. We don't write policies. We build systems that make policies inescapable. And that's exactly what AI governance needs right now.</p>
+
+      <p>My cloud security background gives me something else: I understand what it takes to make security work in production. Not in a research paper, not in a demo, in production. At scale. Under pressure. When the CEO wants the feature shipped and the deadline was yesterday. That's when governance either holds or breaks, and I've spent five years making it hold.</p>
+
+      <p>If you're an infrastructure or DevOps engineer wondering whether AI governance is for you: it is. We're the people who know how to make abstract requirements concrete. And right now, that's exactly what the AI governance world needs.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="ft-cta">
+        <p class="kicker">Get in touch</p>
+        <p class="ft-big">Working on AI safety, security or infrastructure? <em>I'd like to hear about it.</em></p>
+      </div>
+      <div class="ft-row">
+        <span>&copy; 2026 Davina Anthony</span>
+        <div class="footer-links">
+          <a href="https://github.com/daviinaa">GitHub</a>
+          <a href="https://medium.com/@divineanthony">Medium</a>
+          <a href="/about/">About</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

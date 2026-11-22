@@ -1,0 +1,48 @@
+# Cloudflare Pages headers for the personal site (zerotrustissues).
+# CSP notes:
+#   fonts.googleapis.com / fonts.gstatic.com: Google Fonts, used by every page today.
+#   cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/ (path-pinned) + 'wasm-unsafe-eval' + worker-src blob: the onnxruntime-web demo on
+#   /projects/automated-gan-deployment/ (pinned onnxruntime-web@1.17.3, loaded with SRI; the .wasm
+#   files are fetched from the same pinned jsDelivr folder, hence connect-src).
+#   No inline scripts or style attributes anywhere: page JS is /projects/automated-gan-deployment/demo.js
+#   and the architecture SVG is styled from /css/style.css, so style-src needs no hash or 'unsafe-inline'.
+# HSTS has no "preload" on purpose: add it only once the final domain is fixed (preload is hard to undo).
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/ 'wasm-unsafe-eval'; style-src 'self' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/; worker-src 'self' blob:; manifest-src 'self'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+
+/css/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/favicon.svg
+  Cache-Control: public, max-age=86400
+
+/projects/automated-gan-deployment/model/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/projects/automated-gan-deployment/model/*.onnx
+  Content-Type: application/octet-stream
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+# Keep preview deployments out of search results. The production address
+# (zerotrustissues.pages.dev) is indexable while it is the site's only home. When a custom
+# domain is added, add the production pages.dev address back here with noindex.
+https://:version.zerotrustissues.pages.dev/*
+  X-Robots-Tag: noindex

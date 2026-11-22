@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace zerotrustissues.pages.dev with the final host (for example www.<your-domain>) before deploying. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://zerotrustissues.pages.dev/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/projects/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/about/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/gan-fraud-detection-governance/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/zero-trust-ml-platforms/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/ai-guardrails-devops-perspective/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/roadmap-ai-governance-engineering/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/security-first-cloud-infrastructure/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/projects/automated-gan-deployment/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/same-model-three-environments/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/load-testing-fraud-model-aks-minikube/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/guardrails-as-code/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/prompt-book-and-anti/</loc></url>
+  <url><loc>https://zerotrustissues.pages.dev/articles/lay-of-the-land/</loc></url>
+</urlset>
