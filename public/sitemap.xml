@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Replace zerotrustissues.pages.dev with the final host (for example www.<your-domain>) before deploying. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://zerotrustissues.pages.dev/</loc></url>
   <url><loc>https://zerotrustissues.pages.dev/articles/</loc></url>
